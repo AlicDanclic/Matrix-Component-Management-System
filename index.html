@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>矩阵元器件管理系统</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            overflow: hidden; /* 防止页面整体滚动 */
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            padding-bottom: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        select, button, input {
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .matrix-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .scrollable-matrix {
+            width: 100%;
+            overflow: auto; /* 允许水平和竖直滚动 */
+            position: relative;
+            max-height: 450px; /* 设置固定高度 */
+        }
+        .matrix-grid {
+            display: grid;
+            gap: 0;
+            margin: 0 auto;
+            position: relative;
+        }
+        .cell {
+            width: 50px;
+            height: 50px;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #ccc;
+            cursor: pointer;
+            color: #666;
+            transition: all 0.3s;
+        }
+        .cell:hover {
+            transform: scale(1.05);
+        }
+        .resistor {
+            background-color: #ff9595;
+            color: #333;
+        }
+        .capacitor {
+            background-color: #95ff95;
+            color: #333;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 300px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
+        .modal-content h2 {
+            margin-top: 0;
+        }
+        .modal-content select, .modal-content input {
+            width: calc(100% - 20px);
+            margin-bottom: 10px;
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        #download {
+            margin-top: 20px;
+            display: block;
+        }
+
+        /* 行列号样式 */
+        .row-number {
+            width: 40px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #eee;
+            font-weight: bold;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-right: none;
+            position: sticky;
+            left: 0;
+            z-index: 2;
+        }
+        .col-number {
+            width: 50px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #eee;
+            font-weight: bold;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+        .corner-number {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #eee;
+            font-weight: bold;
+            font-size: 14px;
+            border: 1px solid #ddd;
+            position: sticky;
+            top: 0;
+            left: 0;
+            z-index: 3;
+        }
+        
+        /* 针对手机的样式调整 */
+        @media (max-width: 768px) {
+            .cell {
+                width: 40px;
+                height: 40px;
+                font-size: 12px;
+            }
+            .scrollable-matrix {
+                max-height: 300px; /* 设置移动设备上的固定高度 */
+            }
+            .container {
+                padding-bottom: 80px; /* 在页面底部留出空白 */
+            }
+            
+            select, button, input {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .matrix-container {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>矩阵元器件管理系统</h1>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="matrix-size">矩阵大小:</label>
+                <select id="matrix-size">
+                    <option value="3">3x3</option>
+                    <option value="4" selected>4x4</option>
+                    <option value="5">5x5</option>
+                    <option value="6">6x6</option>
+                    <option value="7">7x7</option>
+                    <option value="8">8x8</option>
+                    <option value="9">9x9</option>
+                    <option value="10">10x10</option>
+                    <option value="11">11x11</option>
+                    <option value="12">12x12</option>
+                    <option value="13">13x13</option>
+                    <option value="14">14x14</option>
+                    <option value="15">15x15</option>
+                    <option value="16">16x16</option>
+                    <option value="17">17x17</option>
+                    <option value="18">18x18</option>
+                    <option value="19">19x19</option>
+                    <option value="20">20x20</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="json-file">导入JSON文件:</label>
+                <input type="file" id="json-file" accept=".json">
+            </div>
+            
+            <div class="control-group">
+                <button id="download">导出JSON</button>
+            </div>
+        </div>
+        
+        <div class="matrix-container">
+            <div class="scrollable-matrix">
+                <div id="matrix-grid" class="matrix-grid"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="detail-modal" class="modal">
+        <div class="modal-content">
+            <h2>元器件详情</h2>
+            
+            <select id="component-type">
+                <option value="">选择元器件类型</option>
+                <option value="resistor">电阻</option>
+                <option value="capacitor">电容</option>
+            </select>
+            
+            <select id="component-size">
+                <option value="">选择尺寸</option>
+                <option value="0603">0603</option>
+                <option value="0402">0402</option>
+                <option value="0805">0805</option>
+            </select>
+            
+            <input type="text" id="component-value" placeholder="阻值/容值">
+            
+            <div class="modal-buttons">
+                <button id="close-modal">取消</button>
+                <button id="save-component">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const matrixSizeSelect = document.getElementById('matrix-size');
+            const matrixGrid = document.getElementById('matrix-grid');
+            const jsonFileInput = document.getElementById('json-file');
+            const detailModal = document.getElementById('detail-modal');
+            const componentType = document.getElementById('component-type');
+            const componentSize = document.getElementById('component-size');
+            const componentValue = document.getElementById('component-value');
+            const closeModal = document.getElementById('close-modal');
+            const saveComponent = document.getElementById('save-component');
+            const downloadButton = document.getElementById('download');
+            
+            let matrixSize = parseInt(matrixSizeSelect.value);
+            let matrixData = createEmptyMatrix(matrixSize);
+            let selectedCell = null;
+            
+            // 初始化矩阵
+            function createEmptyMatrix(size) {
+                const matrix = [];
+                for (let i = 0; i < size; i++) {
+                    matrix[i] = [];
+                    for (let j = 0; j < size; j++) {
+                        matrix[i][j] = {
+                            type: '',
+                            size: '',
+                            value: '',
+                            row: i,
+                            col: j
+                        };
+                    }
+                }
+                return matrix;
+            }
+            
+            // 渲染矩阵
+            function renderMatrix() {
+                matrixGrid.className = `matrix-grid`;
+                
+                // 计算网格布局
+                const gridTemplateColumns = `repeat(${matrixSize + 1}, 50px)`;
+                matrixGrid.style.gridTemplateColumns = gridTemplateColumns;
+                matrixGrid.style.gridTemplateRows = `repeat(${matrixSize + 1}, 50px)`;
+                
+                matrixGrid.innerHTML = '';
+                
+                // 添加左上角的空白单元格
+                const corner = document.createElement('div');
+                corner.className = 'corner-number';
+                corner.textContent = '';
+                matrixGrid.appendChild(corner);
+                
+                // 添加列号
+                for (let col = 0; col < matrixSize; col++) {
+                    const colNumber = document.createElement('div');
+                    colNumber.className = 'col-number';
+                    colNumber.textContent = col + 1;
+                    matrixGrid.appendChild(colNumber);
+                }
+                
+                // 添加行号和单元格
+                for (let row = 0; row < matrixSize; row++) {
+                    const rowNumber = document.createElement('div');
+                    rowNumber.className = 'row-number';
+                    rowNumber.textContent = row + 1;
+                    matrixGrid.appendChild(rowNumber);
+                    
+                    for (let col = 0; col < matrixSize; col++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'cell';
+                        cell.dataset.row = row;
+                        cell.dataset.col = col;
+                        
+                        const cellData = matrixData[row][col];
+                        if (cellData.type) {
+                            const color = cellData.type === 'resistor' ? 'resistor' : 'capacitor';
+                            cell.className = `cell ${color}`;
+                            cell.textContent = getCellDisplayText(cellData);
+                        }
+                        
+                        cell.addEventListener('click', function() {
+                            selectedCell = cell;
+                            const row = parseInt(cell.dataset.row);
+                            const col = parseInt(cell.dataset.col);
+                            
+                            const cellData = matrixData[row][col];
+                            
+                            componentType.value = cellData.type || '';
+                            componentSize.value = cellData.size || '';
+                            componentValue.value = cellData.value || '';
+                            
+                            detailModal.style.display = 'flex';
+                        });
+                        
+                        matrixGrid.appendChild(cell);
+                    }
+                }
+            }
+            
+            // 获取单元格显示文本
+            function getCellDisplayText(cellData) {
+                if (!cellData.type) return '';
+                
+                let displayText = '';
+                if (cellData.type === 'resistor') {
+                    displayText += 'R: ';
+                } else if (cellData.type === 'capacitor') {
+                    displayText += 'C: ';
+                }
+                
+                if (cellData.value) {
+                    displayText += cellData.value;
+                }
+                return displayText;
+            }
+            
+            // 矩阵大小选择变化
+            matrixSizeSelect.addEventListener('change', function() {
+                matrixSize = parseInt(this.value);
+                matrixData = createEmptyMatrix(matrixSize);
+                renderMatrix();
+            });
+            
+            // 处理JSON文件导入
+            jsonFileInput.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const jsonData = JSON.parse(e.target.result);
+                        if (Array.isArray(jsonData) && jsonData.length > 0 && Array.isArray(jsonData[0])) {
+                            matrixSize = jsonData.length;
+                            matrixSizeSelect.value = matrixSize;
+                            matrixData = jsonData.map(row => row.map(cell => ({
+                                type: cell.type,
+                                size: cell.size,
+                                value: cell.value,
+                                row: cell.row,
+                                col: cell.col
+                            })));
+                            renderMatrix();
+                        } else {
+                            alert('JSON格式不正确，请确保上传的JSON是一个二维数组');
+                        }
+                    } catch (error) {
+                        alert('解析JSON文件失败: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+            });
+            
+            // 关闭模态框
+            closeModal.addEventListener('click', function() {
+                detailModal.style.display = 'none';
+                selectedCell = null;
+                componentType.value = '';
+                componentSize.value = '';
+                componentValue.value = '';
+            });
+            
+            // 保存组件信息
+            saveComponent.addEventListener('click', function() {
+                if (!selectedCell) return;
+                
+                const row = parseInt(selectedCell.dataset.row);
+                const col = parseInt(selectedCell.dataset.col);
+                
+                matrixData[row][col].type = componentType.value;
+                matrixData[row][col].size = componentSize.value;
+                matrixData[row][col].value = componentValue.value;
+                
+                const cellData = matrixData[row][col];
+                selectedCell.className = cellData.type ? `cell ${cellData.type}` : 'cell';
+                selectedCell.textContent = getCellDisplayText(cellData);
+                
+                detailModal.style.display = 'none';
+                selectedCell = null;
+                componentType.value = '';
+                componentSize.value = '';
+                componentValue.value = '';
+            });
+            
+            // 导出JSON
+            downloadButton.addEventListener('click', function() {
+                const dataStr = JSON.stringify(matrixData, null, 2);
+                const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                
+                const exportFileName = `matrix_${Date.now()}.json`;
+                
+                const linkElement = document.createElement('a');
+                linkElement.setAttribute('href', dataUri);
+                linkElement.setAttribute('download', exportFileName);
+                linkElement.click();
+            });
+            
+            // 点击模态框外部关闭
+            window.addEventListener('click', function(event) {
+                if (event.target === detailModal) {
+                    detailModal.style.display = 'none';
+                    selectedCell = null;
+                    componentType.value = '';
+                    componentSize.value = '';
+                    componentValue.value = '';
+                }
+            });
+            
+            // 初始化渲染
+            renderMatrix();
+        });
+    </script>
+</body>
+</html>
